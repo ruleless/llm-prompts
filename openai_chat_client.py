@@ -240,7 +240,7 @@ def stream_chat(client: OpenAIClient, user_input: str, model: str) -> None:
     """
     client.add_message("user", user_input)
 
-    print("\nAssistant response:")
+    print("\nFrom Assistant:")
     print("-" * 30)
 
     full_response = ""
