@@ -122,6 +122,9 @@ class OpenAIClient:
         Yields:
             流式响应数据块
         """
+        if response is None:
+            return
+
         for line in response.iter_lines():
             if not line:
                 continue
@@ -221,6 +224,10 @@ def print_models(models: List[Dict[str, str]]) -> None:
     Args:
         models: List of models
     """
+    if not models:
+        print("No models available")
+        return
+
     print("\nAvailable models:")
     print("-" * 50)
     for i, model in enumerate(models, 1):
@@ -240,15 +247,21 @@ def stream_chat(client: OpenAIClient, user_input: str, model: str) -> None:
     """
     client.add_message("user", user_input)
 
-    print("\nFrom Assistant:")
+    print("From Assistant:")
     print("-" * 30)
 
     full_response = ""
-    for chunk in client.chat_completion(
+    response = client.chat_completion(
         messages=client.get_history(),
         model=model,
         stream=True
-    ):
+    )
+
+    if response is None:
+        print("Failed to get response from API")
+        return
+
+    for chunk in response:
         if chunk and "choices" in chunk:
             delta = chunk["choices"][0].get("delta", {})
             content = delta.get("content", "")
@@ -329,10 +342,7 @@ def main() -> None:
 
     if args.list_models:
         models = client.list_models()
-        if models:
-            print_models(models)
-        else:
-            print("Unable to get model list")
+        print_models(models)
         return
 
     print(f"OpenAI-style API Client")
@@ -356,10 +366,7 @@ def main() -> None:
                 continue
             elif user_input.lower() in ['models', '模型']:
                 models = client.list_models()
-                if models:
-                    print_models(models)
-                else:
-                    print("Unable to get model list")
+                print_models(models)
                 continue
             elif user_input.lower().startswith('system '):
                 # Set system prompt
