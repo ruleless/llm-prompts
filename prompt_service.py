@@ -152,6 +152,10 @@ class PromptService:
         """获取对话历史"""
         return self._client.get_history()
 
+    def clear_history(self, keep_system_prompt: bool = True) -> None:
+        """清空对话历史"""
+        self._client.clear_history(keep_system_prompt)
+
     def stream_chat(self, text: str) -> None:
         """启动流式聊天对话。
 

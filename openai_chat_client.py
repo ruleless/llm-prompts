@@ -5,16 +5,20 @@ OpenAI风格API客户端
 支持多轮对话、模型列表获取和流式输出
 """
 
+import logging
 import json
 from typing import Dict, Iterator, List, Optional
 
 import requests
 
+logging.basicConfig(level=logging.ERROR, format="%(levelname)s: %(message)s")
+logger = logging.getLogger(__name__)
+
 # 常量定义
 DEFAULT_BASE_URL = "https://api.openai.com/v1"
 DEFAULT_MODEL = "gpt-3.5-turbo"
 DEFAULT_TEMPERATURE = 0.7
-DEFAULT_MAX_TOKENS = 1000
+DEFAULT_MAX_TOKENS = 65535
 DEFAULT_TIMEOUT = 300  # 默认超时时间（秒）
 STREAM_PREFIX = "data: "
 STREAM_END_MARKER = "[DONE]"
@@ -27,7 +31,7 @@ class OpenAIClient:
         self,
         api_key: str,
         base_url: str = DEFAULT_BASE_URL,
-        system_prompt: Optional[str] = None
+        system_prompt: Optional[str] = None,
     ) -> None:
         """初始化OpenAI API客户端。
 
@@ -37,10 +41,10 @@ class OpenAIClient:
             system_prompt: 系统提示词，用于设置AI助手的角色和行为
         """
         self.api_key = api_key
-        self.base_url = base_url.rstrip('/')
+        self.base_url = base_url.rstrip("/")
         self.headers = {
             "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         }
         self.system_prompt = system_prompt
         self.conversation_history: List[Dict[str, str]] = []
@@ -48,7 +52,8 @@ class OpenAIClient:
         # 如果有系统提示词，添加到对话历史开头
         if self.system_prompt:
             self.conversation_history.append(
-                {"role": "system", "content": self.system_prompt})
+                {"role": "system", "content": self.system_prompt}
+            )
 
     def list_models(self) -> List[Dict[str, str]]:
         """获取可用模型列表。
@@ -73,7 +78,7 @@ class OpenAIClient:
         model: str = DEFAULT_MODEL,
         temperature: float = DEFAULT_TEMPERATURE,
         max_tokens: int = DEFAULT_MAX_TOKENS,
-        stream: bool = False
+        stream: bool = False,
     ) -> Optional[Dict]:
         """发送聊天完成请求。
 
@@ -94,21 +99,25 @@ class OpenAIClient:
             "messages": messages,
             "temperature": temperature,
             "max_tokens": max_tokens,
-            "stream": stream
+            "stream": stream,
         }
 
         try:
             response = requests.post(
-                url, headers=self.headers, json=payload, stream=stream, timeout=DEFAULT_TIMEOUT)
+                url,
+                headers=self.headers,
+                json=payload,
+                stream=stream,
+                timeout=DEFAULT_TIMEOUT,
+            )
             response.raise_for_status()
 
             if stream:
                 return self._handle_stream_response(response)
-            else:
-                return response.json()
-        except requests.exceptions.RequestException as e:
-            print(f"请求失败: {e}")
-            return None
+            return response.json()
+        except Exception as e:
+            error = f"request error: {e}"
+            logging.error(error)
 
     def _handle_stream_response(self, response: requests.Response) -> Iterator[Dict]:
         """处理流式响应。
@@ -126,11 +135,11 @@ class OpenAIClient:
             if not line:
                 continue
 
-            decoded_line = line.decode('utf-8')
+            decoded_line = line.decode("utf-8")
             if not decoded_line.startswith(STREAM_PREFIX):
                 continue
 
-            data_str = decoded_line[len(STREAM_PREFIX):]  # 移除 "data: " 前缀
+            data_str = decoded_line[len(STREAM_PREFIX) :]  # 移除 "data: " 前缀
             if self._is_stream_end(data_str):
                 break
 
@@ -181,12 +190,16 @@ class OpenAIClient:
         self.system_prompt = system_prompt
 
         # 如果对话历史中已有系统消息，更新它
-        if self.conversation_history and self.conversation_history[0]["role"] == "system":
+        if (
+            self.conversation_history
+            and self.conversation_history[0]["role"] == "system"
+        ):
             self.conversation_history[0]["content"] = system_prompt
         else:
             # 否则在开头添加系统消息
             self.conversation_history.insert(
-                0, {"role": "system", "content": system_prompt})
+                0, {"role": "system", "content": system_prompt}
+            )
 
     def get_system_prompt(self) -> Optional[str]:
         """获取当前系统提示词。
@@ -204,7 +217,8 @@ class OpenAIClient:
         """
         if keep_system_prompt and self.system_prompt:
             self.conversation_history = [
-                {"role": "system", "content": self.system_prompt}]
+                {"role": "system", "content": self.system_prompt}
+            ]
         else:
             self.conversation_history = []
 
@@ -251,9 +265,7 @@ def stream_chat(client: OpenAIClient, user_input: str, model: str) -> None:
 
     full_response = ""
     response = client.chat_completion(
-        messages=client.get_history(),
-        model=model,
-        stream=True
+        messages=client.get_history(), model=model, stream=True
     )
 
     if response is None:
@@ -288,9 +300,7 @@ def normal_chat(client: OpenAIClient, user_input: str, model: str) -> None:
     client.add_message("user", user_input)
 
     response = client.chat_completion(
-        messages=client.get_history(),
-        model=model,
-        stream=False
+        messages=client.get_history(), model=model, stream=False
     )
 
     if response and "choices" in response:

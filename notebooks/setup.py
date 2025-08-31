@@ -18,8 +18,10 @@ def validate_api_config():
         print("Error: Please provide API key(via OPENAI_API_KEY environment variable)")
         sys.exit(1)
 
-    base_url = "https://api.deepseek.com"
-    model = "deepseek-chat"
+    base_url = "https://open.bigmodel.cn/api/paas/v4/"
+    model = "glm-4.5"
+    # base_url = "https://api.deepseek.com"
+    # model = "deepseek-chat"
 
     return api_key, base_url, model
 

@@ -22,10 +22,10 @@ def start_conversation(client):
     client.clear_history()
 
     print("\nUser: Hello, how are you?")
-    stream_chat(client, "Hello, how are you?", "deepseek-chat")
+    stream_chat(client, "Hello, how are you?", "glm-4.5")
 
     print("\nUser: What can you help me with?")
-    stream_chat(client, "What can you help me with?", "deepseek-chat")
+    stream_chat(client, "What can you help me with?", "glm-4.5")
 
     print("\n=== Conversation completed ===")
 
@@ -36,10 +36,10 @@ def main():
         print("Error: Please set OPENAI_API_KEY environment variable")
         return
 
-    client = OpenAIClient(api_key, base_url="https://api.deepseek.com")
+    client = OpenAIClient(api_key, base_url="https://open.bigmodel.cn/api/paas/v4/")
 
     # 调用打印模型函数
-    print_available_models(client)
+    # print_available_models(client)
 
     # 调用对话函数
     start_conversation(client)
