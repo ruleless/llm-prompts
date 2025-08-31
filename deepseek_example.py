@@ -4,6 +4,7 @@
 import os
 from openai_chat_client import OpenAIClient, print_models, stream_chat
 
+
 def print_available_models(client):
     """打印可用模型列表"""
     print("=== Listing available models ===")
@@ -12,6 +13,7 @@ def print_available_models(client):
         print_models(models)
     else:
         print("Unable to get model list")
+
 
 def start_conversation(client):
     """开始对话"""
@@ -27,6 +29,7 @@ def start_conversation(client):
 
     print("\n=== Conversation completed ===")
 
+
 def main():
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
@@ -40,6 +43,7 @@ def main():
 
     # 调用对话函数
     start_conversation(client)
+
 
 if __name__ == "__main__":
     main()

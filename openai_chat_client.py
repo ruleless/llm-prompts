@@ -5,22 +5,17 @@ OpenAI风格API客户端
 支持多轮对话、模型列表获取和流式输出
 """
 
-import argparse
 import json
-import os
-import sys
 from typing import Dict, Iterator, List, Optional
 
 import requests
-
-# 定义模块导出的公共接口
-__all__ = ['OpenAIClient', 'print_models', 'stream_chat']
 
 # 常量定义
 DEFAULT_BASE_URL = "https://api.openai.com/v1"
 DEFAULT_MODEL = "gpt-3.5-turbo"
 DEFAULT_TEMPERATURE = 0.7
 DEFAULT_MAX_TOKENS = 1000
+DEFAULT_TIMEOUT = 30  # 默认超时时间（秒）
 STREAM_PREFIX = "data: "
 STREAM_END_MARKER = "[DONE]"
 
@@ -52,7 +47,8 @@ class OpenAIClient:
 
         # 如果有系统提示词，添加到对话历史开头
         if self.system_prompt:
-            self.conversation_history.append({"role": "system", "content": self.system_prompt})
+            self.conversation_history.append(
+                {"role": "system", "content": self.system_prompt})
 
     def list_models(self) -> List[Dict[str, str]]:
         """获取可用模型列表。
@@ -63,7 +59,7 @@ class OpenAIClient:
         url = f"{self.base_url}/models"
 
         try:
-            response = requests.get(url, headers=self.headers)
+            response = requests.get(url, headers=self.headers, timeout=DEFAULT_TIMEOUT)
             response.raise_for_status()
             data = response.json()
             return data.get("data", [])
@@ -102,7 +98,8 @@ class OpenAIClient:
         }
 
         try:
-            response = requests.post(url, headers=self.headers, json=payload, stream=stream)
+            response = requests.post(
+                url, headers=self.headers, json=payload, stream=stream, timeout=DEFAULT_TIMEOUT)
             response.raise_for_status()
 
             if stream:
@@ -188,7 +185,8 @@ class OpenAIClient:
             self.conversation_history[0]["content"] = system_prompt
         else:
             # 否则在开头添加系统消息
-            self.conversation_history.insert(0, {"role": "system", "content": system_prompt})
+            self.conversation_history.insert(
+                0, {"role": "system", "content": system_prompt})
 
     def get_system_prompt(self) -> Optional[str]:
         """获取当前系统提示词。
@@ -205,7 +203,8 @@ class OpenAIClient:
             keep_system_prompt: 是否保留系统提示词，默认为True
         """
         if keep_system_prompt and self.system_prompt:
-            self.conversation_history = [{"role": "system", "content": self.system_prompt}]
+            self.conversation_history = [
+                {"role": "system", "content": self.system_prompt}]
         else:
             self.conversation_history = []
 
@@ -262,12 +261,15 @@ def stream_chat(client: OpenAIClient, user_input: str, model: str) -> None:
         return
 
     for chunk in response:
-        if chunk and "choices" in chunk:
-            delta = chunk["choices"][0].get("delta", {})
-            content = delta.get("content", "")
-            if content:
-                print(content, end="", flush=True)
-                full_response += content
+        if not chunk or "choices" not in chunk:
+            continue
+
+        delta = chunk["choices"][0].get("delta", {})
+        content = delta.get("content", "")
+
+        if content:
+            print(content, end="", flush=True)
+            full_response += content
 
     print("\n" + "-" * 30)
 
@@ -297,107 +299,3 @@ def normal_chat(client: OpenAIClient, user_input: str, model: str) -> None:
         client.add_message("assistant", assistant_message)
     else:
         print("Failed to get response")
-
-
-def main() -> None:
-    """Main function."""
-    parser = argparse.ArgumentParser(description="OpenAI-style API Client")
-    parser.add_argument(
-        "--api-key",
-        help="API key",
-        default=os.getenv("OPENAI_API_KEY")
-    )
-    parser.add_argument(
-        "--base-url",
-        help="API base URL",
-        default=DEFAULT_BASE_URL
-    )
-    parser.add_argument(
-        "--model",
-        help="Model to use",
-        default=DEFAULT_MODEL
-    )
-    parser.add_argument(
-        "--stream",
-        action="store_true",
-        help="Enable stream output"
-    )
-    parser.add_argument(
-        "--list-models",
-        action="store_true",
-        help="List available models"
-    )
-    parser.add_argument(
-        "--system-prompt",
-        help="System prompt for setting AI assistant role and behavior"
-    )
-
-    args = parser.parse_args()
-
-    if not args.api_key:
-        print("Error: Please provide API key (via --api-key parameter or OPENAI_API_KEY environment variable)")
-        sys.exit(1)
-
-    client = OpenAIClient(args.api_key, args.base_url, args.system_prompt)
-
-    if args.list_models:
-        models = client.list_models()
-        print_models(models)
-        return
-
-    print(f"OpenAI-style API Client")
-    print(f"API URL: {args.base_url}")
-    print(f"Using model: {args.model}")
-    print(f"Stream output: {'Enabled' if args.stream else 'Disabled'}")
-    print("Type 'quit' to exit, 'clear' to clear history, 'models' to list models")
-    print("Type 'system <prompt>' to set system prompt, 'show_system' to show current system prompt")
-    print("-" * 50)
-
-    while True:
-        try:
-            user_input = input("\nYou: ").strip()
-
-            if user_input.lower() in ['quit', 'exit', '退出']:
-                print("Goodbye!")
-                break
-            elif user_input.lower() in ['clear', '清空']:
-                client.clear_history()
-                print("Conversation history cleared")
-                continue
-            elif user_input.lower() in ['models', '模型']:
-                models = client.list_models()
-                print_models(models)
-                continue
-            elif user_input.lower().startswith('system '):
-                # Set system prompt
-                system_prompt = user_input[7:].strip()
-                if system_prompt:
-                    client.set_system_prompt(system_prompt)
-                    print(f"System prompt set: {system_prompt}")
-                else:
-                    print("Please provide a system prompt after 'system'")
-                continue
-            elif user_input.lower() in ['show_system', '显示系统提示词']:
-                current_system = client.get_system_prompt()
-                if current_system:
-                    print(f"Current system prompt: {current_system}")
-                else:
-                    print("No system prompt set")
-                continue
-            elif not user_input:
-                continue
-
-            if args.stream:
-                stream_chat(client, user_input, args.model)
-            else:
-                normal_chat(client, user_input, args.model)
-
-        except KeyboardInterrupt:
-            print("\n\nProgram interrupted")
-            break
-        except Exception as e:
-            print(f"Error occurred: {e}")
-
-
-if __name__ == "__main__":
-    main()
