@@ -30,6 +30,7 @@ class ServiceFactory:
         self._en_to_zh_service = None
         self._zh_to_en_multi_service = None
         self._sysprompt_opt_service = None
+        self._manus_ai_service = None
 
     @property
     def zh_to_en(self):
@@ -87,6 +88,20 @@ class ServiceFactory:
                 ),
             )
         return self._sysprompt_opt_service
+
+    @property
+    def manus_ai(self):
+        if self._manus_ai_service is None:
+            api_key, base_url, model = validate_api_config()
+            self._manus_ai_service = PromptService(
+                api_key,
+                base_url,
+                model,
+                system_template_path=os.path.join(
+                    rootdir, "system-prompts/manus_ai.txt"
+                ),
+            )
+        return self._manus_ai_service
 
 
 services = ServiceFactory()
