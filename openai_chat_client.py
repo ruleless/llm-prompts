@@ -102,6 +102,7 @@ class OpenAIClient:
             "stream": stream,
         }
 
+        response = None
         try:
             response = requests.post(
                 url,
@@ -115,12 +116,19 @@ class OpenAIClient:
             if stream:
                 return self._handle_stream_response(response)
             return response.json()
-        except Exception as e:
-            error = f"""request error: {e}
-request headers: {response.request.headers}
-request body: {response.request.body}
-"""
+        except requests.exceptions.RequestException as e:
+            error = f"""request error: {e}"""
+            if response is not None and hasattr(response, 'request'):
+                error += f"\nrequest headers: {response.request.headers}"
+                error += f"\nrequest body: {response.request.body}"
             logging.error(error)
+            return None
+        except (json.JSONDecodeError, ValueError) as e:
+            error = f"json decode error: {e}"
+            if response is not None:
+                error += f"response text: {response.text[:500]}..."
+            logging.error(error)
+            return None
 
     def _handle_stream_response(self, response: requests.Response) -> Iterator[Dict]:
         """处理流式响应。
