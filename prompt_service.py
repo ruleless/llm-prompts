@@ -4,7 +4,7 @@ import logging
 import os
 import sys
 from dataclasses import dataclass
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 from openai_chat_client import OpenAIClient, stream_chat
 
@@ -147,6 +147,10 @@ class PromptService:
             当前系统提示词字符串，如果没有设置则返回 None
         """
         return self._client.get_system_prompt()
+
+    def get_history(self) -> List[Dict[str, str]]:
+        """获取对话历史"""
+        return self._client.get_history()
 
     def stream_chat(self, text: str) -> None:
         """启动流式聊天对话。

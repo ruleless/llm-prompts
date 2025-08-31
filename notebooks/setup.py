@@ -29,7 +29,7 @@ class ServiceFactory:
         self._zh_to_en_service = None
         self._en_to_zh_service = None
         self._zh_to_en_multi_service = None
-        self._prompt_opt_service = None
+        self._sysprompt_opt_service = None
 
     @property
     def zh_to_en(self):
@@ -72,18 +72,21 @@ class ServiceFactory:
         return self._zh_to_en_multi_service
 
     @property
-    def prompt_opt(self):
-        if self._prompt_opt_service is None:
+    def sysprompt_opt(self):
+        if self._sysprompt_opt_service is None:
             api_key, base_url, model = validate_api_config()
-            self._prompt_opt_service = PromptService(
+            self._sysprompt_opt_service = PromptService(
                 api_key,
                 base_url,
                 model,
                 system_template_path=os.path.join(
-                    rootdir, "system-prompts/prompt_opt.txt"
+                    rootdir, "system-prompts/sysprompt_opt.txt"
+                ),
+                user_template_path=os.path.join(
+                    rootdir, "user-prompts/sysprompt_opt.txt"
                 ),
             )
-        return self._prompt_opt_service
+        return self._sysprompt_opt_service
 
 
 services = ServiceFactory()
