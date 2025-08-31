@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 DEFAULT_BASE_URL = "https://api.openai.com/v1"
 DEFAULT_MODEL = "gpt-3.5-turbo"
 DEFAULT_TEMPERATURE = 0.7
-DEFAULT_MAX_TOKENS = 65535
+DEFAULT_MAX_TOKENS = 2000
 DEFAULT_TIMEOUT = 300  # 默认超时时间（秒）
 STREAM_PREFIX = "data: "
 STREAM_END_MARKER = "[DONE]"
@@ -116,7 +116,10 @@ class OpenAIClient:
                 return self._handle_stream_response(response)
             return response.json()
         except Exception as e:
-            error = f"request error: {e}"
+            error = f"""request error: {e}
+request headers: {response.request.headers}
+request body: {response.request.body}
+"""
             logging.error(error)
 
     def _handle_stream_response(self, response: requests.Response) -> Iterator[Dict]:
