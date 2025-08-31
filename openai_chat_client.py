@@ -15,7 +15,7 @@ DEFAULT_BASE_URL = "https://api.openai.com/v1"
 DEFAULT_MODEL = "gpt-3.5-turbo"
 DEFAULT_TEMPERATURE = 0.7
 DEFAULT_MAX_TOKENS = 1000
-DEFAULT_TIMEOUT = 30  # 默认超时时间（秒）
+DEFAULT_TIMEOUT = 300  # 默认超时时间（秒）
 STREAM_PREFIX = "data: "
 STREAM_END_MARKER = "[DONE]"
 
