@@ -1,10 +1,37 @@
 #!/usr/bin/env python3
 
+import logging
 import os
 import sys
+from dataclasses import dataclass
 from typing import Dict, Optional
 
 from openai_chat_client import OpenAIClient, stream_chat
+
+# 配置日志记录
+logging.basicConfig(level=logging.ERROR, format="%(levelname)s: %(message)s")
+logger = logging.getLogger(__name__)
+
+
+@dataclass
+class TemplateConfig:
+    """模板配置类，用于组织模板相关的属性。"""
+
+    template_path: Optional[str] = None
+    template_vars: Dict[str, str] = None
+
+    def __post_init__(self):
+        if self.template_vars is None:
+            self.template_vars = {}
+
+
+@dataclass
+class APIConfig:
+    """API配置类，用于组织API相关的属性。"""
+
+    api_key: str
+    base_url: str = "https://api.openai.com/v1"
+    model: str = "gpt-3.5-turbo"
 
 
 class PromptService:
@@ -28,73 +55,90 @@ class PromptService:
             base_url: API 基础 URL，默认为 OpenAI 官方地址
             model: 使用的模型名称，默认为 gpt-3.5-turbo
             **kwargs: 可选关键字参数
-                template_path: 系统提示词模板文件路径，可选
-                template_vars: 模板变量字典，可选
+                system_template_path: 系统提示词模板文件路径，可选
+                system_template_vars: 模板变量字典，可选
+                user_template_path: 用户提示词模板文件路径，可选
+                user_template_vars: 用户提示词模板变量字典，可选
         """
-        self.api_key = api_key
-        self.base_url = base_url
-        self.model = model
-        self.template_path = kwargs.get("template_path")
-        self.template_vars = kwargs.get("template_vars", {})
+        # 创建API配置对象
+        self._api_config = APIConfig(api_key=api_key, base_url=base_url, model=model)
 
-        system_prompt = self._load_and_process_template()
-        self._client = OpenAIClient(
-            api_key=api_key, base_url=base_url, system_prompt=system_prompt
+        # 创建模板配置对象
+        self._system_template_config = TemplateConfig(
+            template_path=kwargs.get("system_template_path"),
+            template_vars=kwargs.get("system_template_vars", {}),
+        )
+        self._user_template_config = TemplateConfig(
+            template_path=kwargs.get("user_template_path"),
+            template_vars=kwargs.get("user_template_vars", {}),
         )
 
-    def _load_and_process_template(self) -> Optional[str]:
-        """加载并处理模板文件。
+        system_prompt = self._load_template_file(self._system_template_config)
+        self._client = OpenAIClient(
+            api_key=self._api_config.api_key,
+            base_url=self._api_config.base_url,
+            system_prompt=system_prompt,
+        )
+
+        # 预加载用户提示词模板
+        self._user_template = self._load_template_file(self._user_template_config)
+
+    def _load_template_file(self, template_config: TemplateConfig) -> Optional[str]:
+        """通用的模板文件加载和处理方法。
+
+        Args:
+            template_config: 模板配置对象
+            template_type: 模板类型，用于错误消息（"system" 或 "user"）
 
         Returns:
-            处理后的系统提示词字符串，如果没有设置模板路径则返回 None
+            处理后的模板字符串，如果没有设置模板路径则返回 None
 
         Raises:
-            SystemExit: 当模板文件不存在或读取失败时退出程序
+            FileNotFoundError: 当模板文件不存在时
+            RuntimeError: 当读取模板文件失败时
         """
-        if not self.template_path:
+        if not template_config.template_path:
             return None
 
         try:
-            with open(self.template_path, "r", encoding="utf-8") as file:
+            with open(template_config.template_path, "r", encoding="utf-8") as file:
                 template = file.read().strip()
-                return self._replace_template_variables(template)
+                return self._replace_template_variables(
+                    template, template_config.template_vars
+                )
         except FileNotFoundError:
-            print(f"Error: System prompt template file not found {self.template_path}")
-            sys.exit(1)
+            error_msg = (
+                f"prompt template file not found: {template_config.template_path}"
+            )
+            logger.error(error_msg)
+            raise
         except Exception as e:
-            print(f"Error occurred while reading template file: {e}")
-            sys.exit(1)
+            error_msg = f"Error occurred while reading template file: {e}"
+            logger.error(error_msg)
+            raise
 
-    def _replace_template_variables(self, template: str) -> str:
+    def _replace_template_variables(
+        self, template: str, template_vars: Dict = None
+    ) -> str:
         """替换模板中的变量占位符。
 
         Args:
             template: 包含变量占位符的模板字符串
+            template_vars: 模板变量字典
 
         Returns:
             替换变量后的模板字符串
 
         变量占位符格式为 {{variable_name}}，将被替换为对应的值。
         """
+        if template_vars is None:
+            return template
+
         result = template
-        for key, value in self.template_vars.items():
+        for key, value in template_vars.items():
             placeholder = f"{{{{{key}}}}}"
             result = result.replace(placeholder, str(value))
         return result
-
-    def update_template_vars(self, new_vars: Dict[str, str]) -> None:
-        """更新模板变量并重新加载系统提示词。
-
-        Args:
-            new_vars: 新的模板变量字典，键为变量名，值为替换内容
-
-        如果设置了模板路径，此方法会重新加载并处理模板文件，
-        然后更新客户端的系统提示词。
-        """
-        self.template_vars.update(new_vars)
-        if self.template_path:
-            system_prompt = self._load_and_process_template()
-            self._client.set_system_prompt(system_prompt)
 
     def get_system_prompt(self) -> Optional[str]:
         """获取当前系统提示词。
@@ -110,15 +154,24 @@ class PromptService:
         Args:
             text: 要发送的文本消息
         """
-        stream_chat(self._client, text, self.model)
+        # 如果有用户提示词模板，则使用模板处理文本
+        if self._user_template:
+            # 将用户输入作为 {{user_input}} 变量处理
+            user_template_vars = self._user_template_config.template_vars.copy()
+            user_template_vars["user_input"] = text
+            processed_text = self._replace_template_variables(
+                self._user_template, user_template_vars
+            )
+        else:
+            processed_text = text
+
+        stream_chat(self._client, processed_text, self._api_config.model)
 
 
 def main() -> None:
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
-        print(
-            "Error: Please provide API key " "(via OPENAI_API_KEY environment variable)"
-        )
+        print("Error: Please provide API key(via OPENAI_API_KEY environment variable)")
         sys.exit(1)
 
     base_url = "https://api.deepseek.com"
@@ -128,8 +181,8 @@ def main() -> None:
         api_key=api_key,
         base_url=base_url,
         model=model,
-        template_path="system-prompts/translation.txt",
-        template_vars={
+        system_template_path="system-prompts/translation.txt",
+        system_template_vars={
             "to": "Chinese",
         },
     )
