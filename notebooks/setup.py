@@ -32,6 +32,7 @@ class ServiceFactory:
             "zh_to_en": None,
             "en_to_zh": None,
             "zh_to_en_multi": None,
+            "en_zh_to_multi": None,
             "sysprompt_opt": None,
             "manus_ai": None,
             "text_opt": None,
@@ -49,6 +50,11 @@ class ServiceFactory:
             "zh_to_en_multi": {
                 "system_template_path": os.path.join(
                     rootdir, "system-prompts/zh_to_en.txt"
+                ),
+            },
+            "en_zh_to_multi": {
+                "system_template_path": os.path.join(
+                    rootdir, "system-prompts/en_to_zh.txt"
                 ),
             },
             "sysprompt_opt": {
@@ -103,6 +109,10 @@ class ServiceFactory:
     @property
     def zh_to_en_multi(self):
         return self._ensure_service("zh_to_en_multi")
+
+    @property
+    def en_zh_to_multi(self):
+        return self._ensure_service("en_zh_to_multi")
 
     @property
     def sysprompt_opt(self):
