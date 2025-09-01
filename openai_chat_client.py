@@ -18,7 +18,6 @@ logger = logging.getLogger(__name__)
 DEFAULT_BASE_URL = "https://api.openai.com/v1"
 DEFAULT_MODEL = "gpt-3.5-turbo"
 DEFAULT_TEMPERATURE = 0.7
-DEFAULT_MAX_TOKENS = 2000
 DEFAULT_TIMEOUT = 300  # 默认超时时间（秒）
 STREAM_PREFIX = "data: "
 STREAM_END_MARKER = "[DONE]"
@@ -77,7 +76,7 @@ class OpenAIClient:
         messages: List[Dict[str, str]],
         model: str = DEFAULT_MODEL,
         temperature: float = DEFAULT_TEMPERATURE,
-        max_tokens: int = DEFAULT_MAX_TOKENS,
+        max_tokens: int = -1,
         stream: bool = False,
     ) -> Optional[Dict]:
         """发送聊天完成请求。
@@ -98,9 +97,10 @@ class OpenAIClient:
             "model": model,
             "messages": messages,
             "temperature": temperature,
-            "max_tokens": max_tokens,
             "stream": stream,
         }
+        if max_tokens > 0:
+            payload["max_tokens"] = max_tokens
 
         response = None
         try:
