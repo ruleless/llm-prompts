@@ -2,7 +2,8 @@
 # -*- coding: utf-8 -*-
 
 import os
-from openai_chat_client import OpenAIClient, print_models, stream_chat
+from chat_client import print_models, stream_chat
+from openai_chat_client import OpenAIClient
 
 
 def print_available_models(client):
@@ -42,7 +43,7 @@ def main():
     print_available_models(client)
 
     # 调用对话函数
-    start_conversation(client)
+    # start_conversation(client)
 
 
 if __name__ == "__main__":

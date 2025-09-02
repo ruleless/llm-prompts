@@ -6,7 +6,8 @@ import sys
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
-from openai_chat_client import OpenAIClient, stream_chat
+from openai_chat_client import OpenAIClient
+from chat_client import stream_chat
 
 # 配置日志记录
 logging.basicConfig(level=logging.ERROR, format="%(levelname)s: %(message)s")
