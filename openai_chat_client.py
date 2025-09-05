@@ -7,7 +7,7 @@ OpenAI风格API客户端
 
 import logging
 import json
-from typing import Dict, Iterator, List, Optional, Union
+from typing import Dict, List, Optional, Union
 
 import requests
 from chat_client import ChatClient

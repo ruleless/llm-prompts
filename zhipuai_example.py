@@ -2,10 +2,14 @@
 # -*- coding: utf-8 -*-
 
 import os
-from openai_chat_client import OpenAIClient, print_models, stream_chat
+from zhipuai_chat_client import ZhipuAiChatClient
+from chat_client import print_models, stream_chat
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
-def print_available_models(client):
+def print_available_models(client: ZhipuAiChatClient):
     """打印可用模型列表"""
     print("=== Listing available models ===")
     models = client.list_models()
@@ -15,7 +19,7 @@ def print_available_models(client):
         print("Unable to get model list")
 
 
-def start_conversation(client):
+def start_conversation(client: ZhipuAiChatClient):
     """开始对话"""
     print("\n=== Starting conversation ===")
 
@@ -31,12 +35,12 @@ def start_conversation(client):
 
 
 def main():
-    api_key = os.getenv("OPENAI_API_KEY")
+    api_key = os.getenv("ZHIPUAI_API_KEY")
     if not api_key:
-        print("Error: Please set OPENAI_API_KEY environment variable")
+        print("Error: Please set ZHIPUAI_API_KEY environment variable")
         return
 
-    client = OpenAIClient(api_key, base_url="https://open.bigmodel.cn/api/paas/v4/")
+    client = ZhipuAiChatClient(api_key)
 
     # 调用打印模型函数
     # print_available_models(client)

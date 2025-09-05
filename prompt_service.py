@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional
 
 from openai_chat_client import OpenAIClient
-from chat_client import stream_chat
+from chat_client import ChatClient, stream_chat
 
 # 配置日志记录
 logging.basicConfig(level=logging.ERROR, format="%(levelname)s: %(message)s")
@@ -44,16 +44,14 @@ class PromptService:
 
     def __init__(
         self,
-        api_key: str,
-        base_url: str = "https://api.openai.com/v1",
+        client: ChatClient,
         model: str = "gpt-3.5-turbo",
         **kwargs,
     ) -> None:
         """初始化 PromptService 实例。
 
         Args:
-            api_key: OpenAI API 密钥
-            base_url: API 基础 URL，默认为 OpenAI 官方地址
+            client: ChatClient 实例
             model: 使用的模型名称，默认为 gpt-3.5-turbo
             **kwargs: 可选关键字参数
                 system_template_path: 系统提示词模板文件路径，可选
@@ -61,8 +59,8 @@ class PromptService:
                 user_template_path: 用户提示词模板文件路径，可选
                 user_template_vars: 用户提示词模板变量字典，可选
         """
-        # 创建API配置对象
-        self._api_config = APIConfig(api_key=api_key, base_url=base_url, model=model)
+        self._client = client
+        self._model = model
 
         # 创建模板配置对象
         self._system_template_config = TemplateConfig(
@@ -74,12 +72,10 @@ class PromptService:
             template_vars=kwargs.get("user_template_vars", {}),
         )
 
+        # 加载并设置系统提示词
         system_prompt = self._load_template_file(self._system_template_config)
-        self._client = OpenAIClient(
-            api_key=self._api_config.api_key,
-            base_url=self._api_config.base_url,
-            system_prompt=system_prompt,
-        )
+        if system_prompt:
+            self._client.set_system_prompt(system_prompt)
 
         # 预加载用户提示词模板
         self._user_template = self._load_template_file(self._user_template_config)
@@ -174,11 +170,14 @@ class PromptService:
         else:
             processed_text = text
 
-        stream_chat(self._client, processed_text, self._api_config.model)
+        stream_chat(self._client, processed_text, self._model)
 
 
 def main() -> None:
-    api_key = os.getenv("OPENAI_API_KEY")
+    from dotenv import load_dotenv
+    load_dotenv()
+
+    api_key = os.getenv("DEEPSEEK_API_KEY")
     if not api_key:
         print("Error: Please provide API key(via OPENAI_API_KEY environment variable)")
         sys.exit(1)
@@ -186,9 +185,15 @@ def main() -> None:
     base_url = "https://api.deepseek.com"
     model = "deepseek-chat"
 
-    prompt_svc = PromptService(
+    # 创建 ChatClient 实例
+    client = OpenAIClient(
         api_key=api_key,
         base_url=base_url,
+    )
+
+    # 使用 ChatClient 创建 PromptService
+    prompt_svc = PromptService(
+        client=client,
         model=model,
         system_template_path="system-prompts/translation.txt",
         system_template_vars={
