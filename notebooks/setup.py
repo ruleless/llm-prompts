@@ -12,21 +12,6 @@ load_dotenv()
 translation_prompt_file = os.path.join(rootdir, "system-prompts/translation.txt")
 
 
-def validate_api_config():
-    """验证API配置并返回配置信息"""
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        print("Error: Please provide API key(via OPENAI_API_KEY environment variable)")
-        sys.exit(1)
-
-    base_url = "https://open.bigmodel.cn/api/paas/v4/"
-    model = "glm-4.5"
-    # base_url = "https://api.deepseek.com"
-    # model = "deepseek-chat"
-
-    return api_key, base_url, model
-
-
 class ServiceFactory:
     def __init__(self):
         self._services = {
