@@ -5,6 +5,7 @@ rootdir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.append(rootdir)
 
 from dotenv import load_dotenv
+from chat_client import ChatClient
 from prompt_service import PromptService
 
 load_dotenv()
@@ -91,10 +92,37 @@ class ServiceFactory:
     def _ensure_service(self, service_name: str):
         """创建指定名称的服务实例"""
         if self._services[service_name] is None:
-            api_key, base_url, model = validate_api_config()
             config = self._service_configs[service_name]
+
+            # 创建 OpenAI 客户端实例
+            client: ChatClient = None
+            model: str = "glm-4.5"
+            if os.getenv("ZHIPUAI_API_KEY"):
+                from zhipuai_chat_client import ZhipuAiChatClient
+                api_key = os.getenv("ZHIPUAI_API_KEY")
+                # base_url = "https://open.bigmodel.cn/api/paas/v4/"
+                model = "glm-4.5"
+                client = ZhipuAiChatClient(
+                    api_key=api_key,
+                    # base_url=base_url,
+                )
+            elif os.getenv("DEEPSEEK_API_KEY"):
+                base_url = "https://api.deepseek.com"
+                model = "deepseek-chat"
+                from openai_chat_client import OpenAIClient
+                client = OpenAIClient(
+                    api_key=api_key,
+                    base_url=base_url,
+                )
+            else:
+                print("Error: API key not provided")
+                sys.exit(1)
+
+            # 使用客户端实例创建 PromptService
             self._services[service_name] = PromptService(
-                api_key, base_url, model, **config
+                client=client,
+                model=model,
+                **config
             )
         return self._services[service_name]
 
