@@ -15,6 +15,7 @@ translation_prompt_file = os.path.join(rootdir, "system-prompts/translation.txt"
 class ServiceFactory:
     def __init__(self):
         self._services = {
+            "pure_chat": None,
             "zh_to_en": None,
             "en_to_zh": None,
             "zh_to_en_multi": None,
@@ -23,8 +24,10 @@ class ServiceFactory:
             "manus_ai": None,
             "text_opt": None,
             "user_prompt_opt": None,
+            "programming": None,
         }
         self._service_configs = {
+            "pure_chat": {},
             "zh_to_en": {
                 "system_template_path": translation_prompt_file,
                 "system_template_vars": {"to": "English"},
@@ -72,6 +75,11 @@ class ServiceFactory:
                     rootdir, "user-prompts/user_prompt_opt.txt"
                 ),
             },
+            "programming": {
+                "system_template_path": os.path.join(
+                    rootdir, "system-prompts/programming.txt"
+                ),
+            },
         }
 
     def _ensure_service(self, service_name: str):
@@ -112,6 +120,10 @@ class ServiceFactory:
         return self._services[service_name]
 
     @property
+    def pure_chat(self):
+        return self._ensure_service("pure_chat")
+
+    @property
     def zh_to_en(self):
         return self._ensure_service("zh_to_en")
 
@@ -142,6 +154,10 @@ class ServiceFactory:
     @property
     def user_prompt_opt(self):
         return self._ensure_service("user_prompt_opt")
+
+    @property
+    def programming(self):
+        return self._ensure_service("programming")
 
 
 services = ServiceFactory()
